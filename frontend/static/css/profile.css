@@ -1,0 +1,68 @@
+.profile-info {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.profile-info p {
+    margin: 15px 0;
+    font-size: 16px;
+    color: #fff;
+}
+
+.profile-info strong {
+    color: #fff;
+    margin-right: 10px;
+    font-weight: 600;
+}
+
+.profile-info span {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.logo i {
+    color: #fff;
+    font-size: 24px;
+    margin-right: 10px;
+}
+
+.logo span {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.password-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.password-container strong {
+    min-width: 140px;
+    display: inline-block;
+}
+
+.toggle-password {
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+    margin-left: 5px;
+}
+
+.toggle-password:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toggle-password i {
+    font-size: 16px;
+} 
