@@ -94,3 +94,6 @@ class DeleteAccount(BaseModel):
 class ChangeUsername(BaseModel):
     username: str
     password: str
+
+    class Config:
+        from_attributes = True  

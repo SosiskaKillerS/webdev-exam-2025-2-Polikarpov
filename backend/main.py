@@ -8,11 +8,7 @@ from typing import List
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-import logging
 from fastapi.responses import JSONResponse
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -42,7 +38,12 @@ def get_db():
         db.close()
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        if not (hashed_password.startswith('$2b$') or hashed_password.startswith('$2a$')):
+            return False
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception:
+        return False
 
 def create_token(data: dict, token_type: str = "access"):
     to_encode = data.copy()
@@ -101,31 +102,37 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
             content={"detail": "Пользователь с таким именем уже существует"}
         )
     
-    hashed_password = pwd_context.hash(user_data.password)
-    new_user = User(
-        username=user_data.username,
-        email=user_data.email,
-        password_hash=hashed_password,
-        role_id=1
-    )
-    
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    access_token = create_token(data={"sub": new_user.email})
-    
-    return {
-        "message": "Регистрация успешна",
-        "user": {
-            "id": new_user.id,
-            "username": new_user.username,
-            "email": new_user.email,
-            "role_id": new_user.role_id
-        },
-        "access_token": access_token,
-        "token_type": "bearer"
-    }
+    try:
+        hashed_password = pwd_context.hash(user_data.password)
+        new_user = User(
+            username=user_data.username,
+            email=user_data.email,
+            password_hash=hashed_password,
+            role_id=1
+        )
+        
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        access_token = create_token(data={"sub": new_user.email})
+        
+        return {
+            "message": "Регистрация успешна",
+            "user": {
+                "id": new_user.id,
+                "username": new_user.username,
+                "email": new_user.email,
+                "role_id": new_user.role_id
+            },
+            "access_token": access_token,
+            "token_type": "bearer"
+        }
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Ошибка при регистрации пользователя"}
+        )
 
 @app.post("/login")
 def login(login_data: LoginRequest, response: Response, db: Session = Depends(get_db)):
@@ -187,10 +194,15 @@ def change_password(password_data: ChangePassword, current_user: User = Depends(
             content={"detail": "Новый пароль должен отличаться от текущего"}
         )
     
-    current_user.password_hash = pwd_context.hash(password_data.new_password)
-    db.commit()
-    
-    return {"message": "Пароль успешно изменен"}
+    try:
+        current_user.password_hash = pwd_context.hash(password_data.new_password)
+        db.commit()
+        return {"message": "Пароль успешно изменен"}
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Ошибка при изменении пароля"}
+        )
 
 @app.delete("/delete-account")
 def delete_account(password_data: DeleteAccount, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -200,9 +212,15 @@ def delete_account(password_data: DeleteAccount, current_user: User = Depends(ge
             content={"detail": "Неверный пароль"}
         )
     
-    db.delete(current_user)
-    db.commit()
-    return {"message": "Аккаунт успешно удален"}
+    try:
+        db.delete(current_user)
+        db.commit()
+        return {"message": "Аккаунт успешно удален"}
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Ошибка при удалении аккаунта"}
+        )
 
 @app.post("/change-username")
 def change_username(username_data: ChangeUsername, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -224,6 +242,12 @@ def change_username(username_data: ChangeUsername, current_user: User = Depends(
             content={"detail": "Неверный пароль"}
         )
     
-    current_user.username = username_data.username
-    db.commit()
-    return {"message": "Имя пользователя успешно изменено"}
+    try:
+        current_user.username = username_data.username
+        db.commit()
+        return {"message": "Имя пользователя успешно изменено"}
+    except Exception:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Ошибка при изменении имени пользователя"}
+        )
