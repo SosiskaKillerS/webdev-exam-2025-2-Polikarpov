@@ -1,90 +1,110 @@
-document.getElementById('login-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    // Скрываем предыдущие уведомления
-    hideNotification();
-    
-    // 1. Собираем данные формы
-    const formData = {
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value,
-        remember: document.getElementById('remember').checked
-    };
-
-    // Логируем данные, которые отправляем на сервер
-    console.log('Отправляемые данные на сервер (JSON):', JSON.stringify(formData, null, 2));
-    console.log('Объект данных:', formData);
-
-    try {
-        // 2. Отправляем запрос
-        const response = await fetch('http://localhost:8000/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        });
-        
-        // 3. Получаем ответ
-        const result = await response.json();
-        
-        // Логируем ответ от сервера
-        console.log('Ответ от сервера (JSON):', JSON.stringify(result, null, 2));
-        console.log('Объект ответа:', result);
-        
-        if (!response.ok) {
-            // Показываем ошибку
-            if (result.detail === 'Wrong email') {
-                showNotification('Пользователь с таким email не найден', 'error');
-            } else if (result.detail === 'Wrong password') {
-                showNotification('Неверный пароль', 'error');
-            } else {
-                showNotification('Ошибка авторизации', 'error');
-            }
-        } else {
-            // Успешная авторизация
-            showNotification('Успешный вход!', 'success');
-            
-            // Сохраняем данные пользователя
-            localStorage.setItem('userData', JSON.stringify({
-                username: result.username,
-                email: formData.email,
-                password: formData.password
-            }));
-            
-            // Перенаправляем на страницу профиля
-            setTimeout(() => {
-                window.location.href = 'profile.html';
-            }, 1000);
-        }
-        
-    } catch (error) {
-        console.error("Ошибка при отправке:", error);
-        showNotification('Ошибка соединения с сервером', 'error');
+// Функция для управления состоянием загрузки
+function setLoading(isLoading) {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.display = isLoading ? 'flex' : 'none';
     }
-});
+}
 
-function showNotification(message, type) {
+// Функция для получения значения cookie
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+// Показ уведомлений
+function showNotification(message, isError = false) {
     const notification = document.getElementById('notification');
     const notificationMessage = document.getElementById('notification-message');
     
-    // Сбрасываем классы
-    notification.className = 'notification';
-    
-    // Добавляем нужные классы
-    notification.classList.add(type);
-    notification.classList.add('visible');
-    
     notificationMessage.textContent = message;
+    notification.className = `notification ${isError ? 'error' : 'success'}`;
+    notification.classList.remove('hidden');
     
-    // Автоматически скрываем уведомление через 4 секунды
     setTimeout(() => {
-        notification.classList.remove('visible');
+        notification.classList.add('hidden');
+    }, 3000);
+}
+
+// Выход из системы
+function logout() {
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('userData');
+    window.location.href = 'auth.html';
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    const loginForm = document.getElementById('login-form');
+
+    // Функция для показа уведомлений
+    function showNotification(message, isError = false) {
+        const notification = document.getElementById('notification');
+        const notificationMessage = document.getElementById('notification-message');
+        
+        notificationMessage.textContent = message;
+        notification.className = `notification ${isError ? 'error' : 'success'}`;
+        notification.classList.remove('hidden');
+        
         setTimeout(() => {
             notification.classList.add('hidden');
-        }, 300); // Ждем завершения анимации
-    }, 4000);
-}
+        }, 3000);
+    }
+
+    // Функция для выхода
+    function logout() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('userData');
+        window.location.href = 'auth.html';
+    }
+
+    // Проверка авторизации при загрузке страницы
+    const token = localStorage.getItem('access_token');
+    if (token) {
+        window.location.href = 'movies.html';
+    }
+
+    // Обработчик формы входа
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember-me').checked;
+
+            try {
+                const response = await fetch('http://localhost:8000/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, remember })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem('access_token', data.access_token);
+                    localStorage.setItem('userData', JSON.stringify(data.user));
+                    window.location.href = 'movies.html';
+                } else {
+                    showNotification(data.detail || 'Ошибка входа', true);
+                }
+            } catch (error) {
+                showNotification('Ошибка сервера', true);
+            }
+        });
+    }
+
+    // Обработчик кнопки выхода
+    const logoutButton = document.getElementById('logout-btn');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            logout();
+        });
+    }
+});
 
 function hideNotification() {
     const notification = document.getElementById('notification');

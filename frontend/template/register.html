@@ -1,37 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Регистрация | Киносервис</title>
-    <link rel="stylesheet" href="C:\Users\pesas\OneDrive\Desktop\webdev-exam-2025-2-Polikarpov\frontend\static\css\login.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="../static/css/login.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="auth-container">
-    <div class="logo">
-      <i class="fas fa-film"></i>
-      <span>Киносервис</span>
+        <div class="logo">
+            <i class="fas fa-film"></i>
+            <h1>Киносервис</h1>
+        </div>
+        
+        <form id="register-form" class="auth-form">
+            <div class="form-group">
+                <label for="username">Имя пользователя</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="auth-button">
+                <i class="fas fa-user-plus"></i> Зарегистрироваться
+            </button>
+        </form>
+        
+        <div class="auth-links">
+            <a href="auth.html" class="login-link">
+                <i class="fas fa-sign-in-alt"></i> Уже есть аккаунт? Войти
+            </a>
+        </div>
     </div>
-    <h1>Создать аккаунт</h1>
-    <form id="register-form" class="auth-form">
-      <div class="form-group">
-        <label for="username">Имя пользователя</label>
-        <input type="text" id="username" name="username" placeholder="Finn the human" required>
-      </div>
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" placeholder="example@mail.com" required>
-      </div>
-      <div class="form-group">
-        <label for="password">Пароль</label>
-        <input type="password" id="password" name="password" placeholder="Введите пароль" required>
-      </div>
-      <button type="submit" class="auth-button">Зарегистрироваться</button>
-    </form>
-    <p class="auth-link">
-      Уже есть аккаунт? <a href="C:\Users\pesas\OneDrive\Desktop\webdev-exam-2025-2-Polikarpov\frontend\template\auth.html">Войти</a>
-    </p>
-  </div>
-    <script src="C:\Users\pesas\OneDrive\Desktop\webdev-exam-2025-2-Polikarpov\frontend\static\js\regscript.js"></script>
+
+    <!-- Уведомления -->
+    <div id="notification" class="notification hidden">
+        <div class="notification-content">
+            <span id="notification-message"></span>
+        </div>
+    </div>
+
+    <script src="../static/js/reg.js"></script>
 </body>
 </html>

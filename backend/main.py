@@ -1,18 +1,20 @@
-from fastapi import FastAPI, Depends, HTTPException, Response
+from fastapi import FastAPI, Depends, Response, Header
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
-from jose import JWTError, jwt
 from .database import SessionLocal, engine
 from . import models
-from fastapi.middleware.cors import CORSMiddleware
-from .models import User, LoginRequest, UserBase
+from .models import User, LoginRequest, UserBase, UserRequest, UserCreate, ChangePassword, DeleteAccount, ChangeUsername
 from typing import List
-import hashlib
+from datetime import datetime, timedelta
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+import logging
+from fastapi.responses import JSONResponse
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 models.Base.metadata.create_all(bind=engine)
-
-
 
 app = FastAPI()
 
@@ -21,7 +23,8 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 SECRET_KEY = "your-secret-key-keep-it-secret"
@@ -29,18 +32,8 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 30
 
-def hash_password(password: str) -> str:
-    """Хеширует пароль используя pgcrypto crypt с алгоритмом bf"""
-    # Используем тот же формат, что и pgcrypto crypt
-    return f"$2a$10${password}"  # $2a$10$ - это префикс для bcrypt с 10 раундами
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Проверяет, соответствует ли пароль хешу"""
-    # В этом случае проверка будет происходить на уровне базы данных
-    # через функцию crypt, поэтому просто возвращаем True
-    return True
-
-# Dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -48,41 +41,106 @@ def get_db():
     finally:
         db.close()
 
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
 def create_token(data: dict, token_type: str = "access"):
-    """
-    Создает JWT токен
-    
-    Args:
-        data (dict): Данные для кодирования в токен
-        token_type (str): Тип токена ("access" или "refresh")
-    
-    Returns:
-        str: Закодированный JWT токен
-    """
     to_encode = data.copy()
-    
     if token_type == "access":
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    else: 
+    else:
         expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    
     to_encode.update({"exp": expire, "type": token_type})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-@app.get("/users", response_model=List[UserBase])
+def get_current_user(authorization: str = Header(...), db: Session = Depends(get_db)):
+    try:
+        token = authorization.replace("Bearer ", "")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid authentication credentials"}
+            )
+        user = db.query(User).filter(User.email == email).first()
+        if user is None:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "User not found"}
+            )
+        return user
+    except JWTError:
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Invalid token"}
+        )
+
+@app.get("/me", response_model=UserRequest)
+def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+@app.get("/users", response_model=List[UserRequest])
 def get_users(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return users
 
+@app.post("/register")
+def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == user_data.email).first()
+    if existing_user:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Пользователь с таким email уже существует"}
+        )
+    
+    existing_username = db.query(User).filter(User.username == user_data.username).first()
+    if existing_username:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Пользователь с таким именем уже существует"}
+        )
+    
+    hashed_password = pwd_context.hash(user_data.password)
+    new_user = User(
+        username=user_data.username,
+        email=user_data.email,
+        password_hash=hashed_password,
+        role_id=1
+    )
+    
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    access_token = create_token(data={"sub": new_user.email})
+    
+    return {
+        "message": "Регистрация успешна",
+        "user": {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "role_id": new_user.role_id
+        },
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
+
 @app.post("/login")
 def login(login_data: LoginRequest, response: Response, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == login_data.email).first()
-    if not user: 
-        raise HTTPException(status_code=404, detail="User not found")
+    if not user:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Пользователь не найден"}
+        )
     
-    # Проверяем пароль
     if not verify_password(login_data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid password")
+        return JSONResponse(
+            status_code=401,
+            content={"detail": "Неверный пароль"}
+        )
     
     access_token = create_token(data={"sub": user.email}, token_type="access")
     
@@ -91,14 +149,14 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
-            httponly=True,  
-            secure=True,    
+            httponly=True,
+            secure=True,
             samesite="lax",
             max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
         )
     
     return {
-        "message": "Login successful",
+        "message": "Вход выполнен успешно",
         "user": {
             "id": user.id,
             "username": user.username,
@@ -108,3 +166,64 @@ def login(login_data: LoginRequest, response: Response, db: Session = Depends(ge
         "access_token": access_token,
         "token_type": "bearer"
     }
+
+@app.post("/logout")
+def logout(response: Response):
+    response = JSONResponse(content={"message": "Successfully logged out"})
+    response.delete_cookie(key="refresh_token")
+    return response
+
+@app.post("/change-password")
+def change_password(password_data: ChangePassword, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not verify_password(password_data.current_password, current_user.password_hash):
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Неверный текущий пароль"}
+        )
+    
+    if password_data.current_password == password_data.new_password:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Новый пароль должен отличаться от текущего"}
+        )
+    
+    current_user.password_hash = pwd_context.hash(password_data.new_password)
+    db.commit()
+    
+    return {"message": "Пароль успешно изменен"}
+
+@app.delete("/delete-account")
+def delete_account(password_data: DeleteAccount, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not verify_password(password_data.password, current_user.password_hash):
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Неверный пароль"}
+        )
+    
+    db.delete(current_user)
+    db.commit()
+    return {"message": "Аккаунт успешно удален"}
+
+@app.post("/change-username")
+def change_username(username_data: ChangeUsername, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.username == username_data.username:
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Новое имя пользователя должно отличаться от текущего"}
+        )
+    
+    if db.query(User).filter(User.username == username_data.username).first():
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Имя пользователя уже занято"}
+        )
+    
+    if not verify_password(username_data.password, current_user.password_hash):
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Неверный пароль"}
+        )
+    
+    current_user.username = username_data.username
+    db.commit()
+    return {"message": "Имя пользователя успешно изменено"}

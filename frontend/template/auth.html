@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход | Киносервис</title>
-    <link rel="stylesheet" href="C:\Users\pesas\OneDrive\Desktop\webdev-exam-2025-2-Polikarpov\frontend\static\css\login.css">
+    <link rel="stylesheet" href="../static/css/login.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -21,22 +21,23 @@
         <label for="email">
         Email
         </label>
-        <input type="email" id="email" placeholder="example@mail.com" required>
+        <input type="email" id="email" name="email" autocomplete="email" placeholder="example@mail.com" required>
       </div>
       
       <div class="form-group">
         <label for="password">
         Пароль
         </label>
-        <input type="password" id="password" placeholder="Введите пароль" required>
+        <input type="password" id="password" name="password" autocomplete="current-password" placeholder="password" required>
       </div>
       
       <div class="form-options">
-        <label class="remember-me">
-          <input type="checkbox" id="remember">
-          <span>Запомнить меня</span>
+        <label class="checkbox-container">
+            <input type="checkbox" id="remember-me" name="remember" autocomplete="off">
+            <span class="checkmark"></span>
+            <span class="checkbox-label">Запомнить меня</span>
         </label>
-        <a href="/forgot-password.html" class="forgot-password">Забыли пароль?</a>
+        <a href="#" class="forgot-password">Забыли пароль?</a>
       </div>
       
       <button type="submit" class="auth-button">
@@ -44,8 +45,8 @@
       </button>
     </form>
     
-    <div class="auth-footer">
-      <p class="auth-link">Нет аккаунта? <a href="C:\Users\pesas\OneDrive\Desktop\webdev-exam-2025-2-Polikarpov\frontend\template\register.html">Зарегистрироваться</a></p>
+    <div class="auth-links">
+        <a href="register.html" class="register-link">Зарегистрироваться</a>
     </div>
   </div>
 
@@ -53,8 +54,8 @@
     <div class="notification-content">
       <span id="notification-message"></span>
     </div>
-</div>
+  </div>
 
-  <script src="C:\Users\pesas\OneDrive\Desktop\webdev-exam-2025-2-Polikarpov\frontend\static\js\auth.js"></script>
+  <script src="../static/js/auth.js"></script>
 </body>
 </html>

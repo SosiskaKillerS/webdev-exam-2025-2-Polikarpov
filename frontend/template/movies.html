@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Фильмы</title>
+    <link rel="stylesheet" href="../static/css/movies.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Индикатор загрузки -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <header>
+        <nav>
+            <div class="nav-container">
+                <a href="movies.html" class="logo">
+                    <i class="fas fa-film"></i>
+                    KinoService
+                </a>
+                <div class="nav-links" id="navLinks">
+                    <!-- Кнопки будут добавлены через JavaScript -->
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="movies-container">
+            <div class="movies-header">
+                <h1>Фильмы</h1>
+                <div class="filters">
+                    <input type="text" id="searchInput" placeholder="Поиск фильмов...">
+                    <select id="genreFilter">
+                        <option value="">Все жанры</option>
+                    </select>
+                    <select id="yearFilter">
+                        <option value="">Все годы</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="movies-grid" id="moviesGrid">
+                <!-- Фильмы будут добавлены через JavaScript -->
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <div class="footer-content">
+            <p>&copy; 2025 KinoService.</p>
+        </div>
+    </footer>
+
+    <script src="../static/js/movies.js"></script>
+</body>
+</html> 
